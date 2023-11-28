@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import expr, col, column
 
 # spark 실행계획 생성
+spark = SparkSession.builder.appName("Load Data").getOrCreate()
+
 df = sqlContext.read.format("json").option("compression", "gzip").load('s3://path/of/the/s3.gz')
 
 # spark 액션
@@ -74,3 +76,22 @@ for schema_name, schema_datatype in segment_datatypes:
     
     else:
         schema.append(schema_name)
+
+
+# nested column data 빼내기
+for i in schema_data:
+    try:
+        df = df.withColumn(i, df[i])
+    except:
+        pass
+
+# 필요없는 schema 정리
+new_df = df.drop('_metadata', 'text', 'pop', 'tray')
+new_df.show(5)
+
+# timestamp로 datatype이 변경되어야할 schema 변경
+from pyspark.sql.functions import col
+
+timestamp_columns = ['Timestamp', 'timestampAt', 'timestamp_At', 'timestamp']
+for col_name in timestamp_columns:
+    new_df = new_df.withColumn(col_name, col(col_name).cast("timestamp"))
