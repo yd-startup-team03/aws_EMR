@@ -15,7 +15,8 @@ from airflow.providers.amazon.aws.operators.emr import (
     EmrServerlessStopApplicationOperator,
 )
 from airflow.utils.trigger_rule import TriggerRule
-
+import pandas as pd
+from io import StringIO
 
 day_time = 86400000
 hook = S3Hook(aws_conn_id='aws_s3')
@@ -54,18 +55,50 @@ def list_keys(**context):
     context['task_instance'].xcom_push(key='current_time',value=current_time)
     context['task_instance'].xcom_push(key='key_val', value=len_keys)
     context['task_instance'].xcom_push(key='prefix_val', value=prefix) 
-    new_current_folder = int(current_folder) + day_time
-    Variable.set('current_date_folder', new_current_folder)
+    # new_current_folder = int(current_folder) + day_time
+    # Variable.set('current_date_folder', new_current_folder)
     if len_keys == 0:
       return 'send_slack_fail'
     else:
       return 'send_slack_success'
     
+def check_data(**context):
+    hook = S3Hook(aws_conn_id='aws_s3')
+    # paginator = hook.get_conn().get_paginator('list_objects_v2')
+    bucket ='taehun-s3-bucket-230717'
+    # current_time = datetime.now().strftime('%m월 %d일 %A %H시 %M분')
+    current_folder = Variable.get('current_date_folder')
+    prefix = f'csv/check_data/{current_folder}/'
+  
+    # logging.info(f"Listing Keys from {bucket}/{prefix}")
+    keys = hook.list_keys(bucket_name=bucket, prefix=prefix)
     
+    check_message = ""
+    for key in keys:
+      if key.endswith('.json'):
+        body = hook.read_key(key=key, bucket_name=bucket)
+        data = StringIO(body)
+        df = pd.read_json(data,lines=True)
+        check_message += f"\n{key}:\n{df.head().to_string()}\n"
+    context['task_instance'].xcom_push(key='check', value=check_message)
+    
+        
+    
+
+    # logging.info(f"len_key chk {len_keys}, {keys}")
+    # context['task_instance'].xcom_push(key='file_size',value=file_size)
+
+    # new_current_folder = int(current_folder) + day_time
+    # Variable.set('current_date_folder', new_current_folder)
+    # if len_keys == 0:
+      # return 'send_slack_fail'
+    # else:
+      # return 'send_slack_success'
+
 
 
 with DAG(
-    dag_id="emr_app_start",
+    dag_id="emr_app_1210_test6",
     schedule_interval=None,
     start_date=datetime(2023, 12, 6),
     tags=["Medistream"],
@@ -109,10 +142,12 @@ with DAG(
         execution_role_arn=JOB_ROLE_ARN,
         job_driver={
             "sparkSubmit": {
-                "entryPoint": f"s3://{bucket}/scripts/pyspark_test_5.py",
-                "entryPointArguments" :["--path","{{ task_instance.xcom_pull(task_ids='list_keys', key='prefix_val') }}"],
+                "entryPoint": f"s3://{bucket}/scripts/chasago_log.py",
+                "entryPointArguments" :["--path","{{ task_instance.xcom_pull(task_ids='list_keys', key='prefix_val') }}","--token",token],
                 "sparkSubmitParameters": "--conf spark.executor.cores=1 --conf spark.executor.memory=4g\
-            --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1",
+            --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1"
+                
+            
             }
         },
         configuration_overrides=DEFAULT_MONITORING_CONFIG,
@@ -136,7 +171,17 @@ with DAG(
         task_id='spark_success',
         token = token,
         channel = '#일반',
-        text ="airflow 작업이 완료되었습니다."
+        text ="spark 작업이 완료되었습니다."
+    )
+    check_data_task = PythonOperator(
+        task_id = 'check_data',
+        python_callable=check_data
+    )
+    test_data_slack = SlackAPIPostOperator(
+        task_id='check_data_slack',
+        token = token,
+        channel = '#일반',
+        text ="{{ task_instance.xcom_pull(task_ids='check_data', key='check') }}, airflow 작업 완료"
     )
     spark_slack_fail_emr = SlackAPIPostOperator(
         task_id='spark_fail_emr',
@@ -152,4 +197,5 @@ with DAG(
     
     check_task >> [send_slack_fail, send_slack_success]
     send_slack_success >> job1
-    job1 >> [stop_app, spark_slack, spark_slack_fail_emr]
+    job1 >> stop_app >> spark_slack >>  spark_slack_fail_emr
+    spark_slack >> check_data_task >> test_data_slack
