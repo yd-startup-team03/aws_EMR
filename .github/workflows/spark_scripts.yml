@@ -13,9 +13,7 @@ jobs:
     - name: Deploy to S3
       uses: jakejarvis/s3-sync-action@master  # S3 업로드를 위한 GitHub Actions 플러그인을 사용합니다.
       with:
-        args: --acl public-read --follow-symlinks --delete  # S3 업로드 옵션을 설정합니다.
-        path: ./scripts  # S3에 업로드할 레포지토리 내의 디렉토리를 지정합니다.
-        bucket: taehun-s3-bucket-230717/scripts/  # S3 버킷의 이름을 지정합니다.
+        args: ./scripts s3://taehun-s3-bucket-230717/scripts/  # S3 업로드 옵션을 설정합니다.
       env:
         AWS_S3_BUCKET: taehun-s3-bucket-230717/scripts # S3 버킷의 이름을 지정합니다.
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key를 지정합니다.
