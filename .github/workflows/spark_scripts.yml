@@ -17,7 +17,7 @@ jobs:
         path: ./scripts  # S3에 업로드할 레포지토리 내의 디렉토리를 지정합니다.
         bucket: taehun-s3-bucket-230717/scripts/  # S3 버킷의 이름을 지정합니다.
       env:
-        AWS_S3_BUCKET: taehun-se-bucket-230717/scripts # S3 버킷의 이름을 지정합니다.
+        AWS_S3_BUCKET: taehun-s3-bucket-230717/scripts # S3 버킷의 이름을 지정합니다.
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key를 지정합니다.
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Key를 지정합니다.
         AWS_REGION: 'ap-northeast-2'  # AWS 리전을 지정합니다.
