@@ -2,21 +2,23 @@ name: Upload to S3
 on:
   push:
     branches:
-      - feature/CI  # 워크플로우를 실행할 브랜치를 지정합니다.
+      - feature/CI
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2  # 레포지토리의 코드를 체크아웃합니다.
+    - uses: actions/checkout@v2
     
     - name: Deploy to S3
-      uses: jakejarvis/s3-sync-action@master  # S3 업로드를 위한 GitHub Actions 플러그인을 사용합니다.
+      uses: jakejarvis/s3-sync-action@master
       with:
-        args: ./scripts s3://taehun-s3-bucket-230717/scripts/  # S3 업로드 옵션을 설정합니다.
+        args: --acl public-read --follow-symlinks --delete
       env:
-        AWS_S3_BUCKET: taehun-s3-bucket-230717/scripts # S3 버킷의 이름을 지정합니다.
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key를 지정합니다.
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Key를 지정합니다.
-        AWS_REGION: 'ap-northeast-2'  # AWS 리전을 지정합니다.
+        SOURCE_DIR: './scripts'
+        AWS_S3_BUCKET: 's3://taehun-s3-bucket-230717/scripts'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'ap-northeast-2'
+
 
