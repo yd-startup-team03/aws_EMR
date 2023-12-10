@@ -142,9 +142,9 @@ p = ChasagoLog()
 chasago_log = p.process(s3_path)
 
 
-messageId_count = chasago_log.select("messageId").count()
-distinct_messageId_count = chasago_log.select("messageId").distinct().count()
-total_row_count = chasago_log.count() 
+DL_pk_count = chasago_log.select("messageId").count()
+distinct_DL_pk_count = chasago_log.select("messageId").distinct().count()
+DL_total_row_count = chasago_log.count() 
 
 
 save_path = f"s3://taehun-s3-bucket-230717/csv/{args.path}"
@@ -157,19 +157,19 @@ chasago_log.write.json(save_path,mode="overwrite")
 loaded_df = p.spark.read.json(save_path)
 
 
-messageId_count2 = loaded_df.select("messageId").count()
-distinct_messageId_count2 = loaded_df.select("messageId").distinct().count()
-total_row_count2 = loaded_df.count() 
+DW_pk_count = loaded_df.select("messageId").count()
+distinct_DW_pk_count = loaded_df.select("messageId").distinct().count()
+DW_total_row_count = loaded_df.count() 
 
 
 # 데이터프레임 형식으로 변환
 count_df = p.spark.createDataFrame([
-    Row(metric="messageId_count", value=messageId_count),
-    Row(metric="distinct_messageId_count", value=distinct_messageId_count),
-    Row(metric="total_row_count", value=total_row_count),
-    Row(metric="messageId_count2", value=messageId_count2),
-    Row(metric="distinct_messageId_count2", value=distinct_messageId_count2),
-    Row(metric="total_row_count2", value=total_row_count2)
+    Row(metric="DL_pk_count", value=DL_pk_count),
+    Row(metric="distinct_DL_pk_count", value=distinct_DL_pk_count),
+    Row(metric="DL_total_row_count", value=DL_total_row_count),
+    Row(metric="DW_pk_count", value=DW_pk_count),
+    Row(metric="distinct_DW_pk_count", value=distinct_DW_pk_count),
+    Row(metric="DW_total_row_count", value=DW_total_row_count)
 ])
 
 count_df.write.json(test_storage_path,mode="overwrite")
