@@ -80,25 +80,20 @@ def check_data(**context):
         data = StringIO(body)
         df = pd.read_json(data,lines=True)
         check_message += f"\n{key}:\n{df.head().to_string()}\n"
+
+        # check_message += f"\n{df.head().to_string()}\n"
     context['task_instance'].xcom_push(key='check', value=check_message)
-    
+    # new_current_folder = int(current_folder) + day_time
+    # Variable.set('current_date_folder', new_current_folder)
         
     
 
-    # logging.info(f"len_key chk {len_keys}, {keys}")
-    # context['task_instance'].xcom_push(key='file_size',value=file_size)
 
-    # new_current_folder = int(current_folder) + day_time
-    # Variable.set('current_date_folder', new_current_folder)
-    # if len_keys == 0:
-      # return 'send_slack_fail'
-    # else:
-      # return 'send_slack_success'
 
 
 
 with DAG(
-    dag_id="emr_app_1210_test6",
+    dag_id="emr_app_1211_4",
     schedule_interval=None,
     start_date=datetime(2023, 12, 6),
     tags=["Medistream"],
@@ -181,7 +176,7 @@ with DAG(
         task_id='check_data_slack',
         token = token,
         channel = '#일반',
-        text ="{{ task_instance.xcom_pull(task_ids='check_data', key='check') }}, airflow 작업 완료"
+        text ="{{ task_instance.xcom_pull(task_ids='check_data', key='check') }}\n airflow 작업 완료"
     )
     spark_slack_fail_emr = SlackAPIPostOperator(
         task_id='spark_fail_emr',
