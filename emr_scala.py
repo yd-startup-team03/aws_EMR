@@ -68,7 +68,8 @@ def check_data(**context):
     bucket ='taehun-s3-bucket-230717'
     # current_time = datetime.now().strftime('%m월 %d일 %A %H시 %M분')
     current_folder = Variable.get('current_date_folder')
-    prefix = f'csv/check_data/{current_folder}/'
+    prefix = f'tempdir/{current_folder}/checkData'
+
   
     # logging.info(f"Listing Keys from {bucket}/{prefix}")
     keys = hook.list_keys(bucket_name=bucket, prefix=prefix)
@@ -93,7 +94,7 @@ def check_data(**context):
 
 
 with DAG( 
-    dag_id="emr_app_1211_5",
+    dag_id="medistream_logdata",
     schedule_interval=None,
     start_date=datetime(2023, 12, 6),
     tags=["Medistream"],
@@ -137,11 +138,11 @@ with DAG(
         execution_role_arn=JOB_ROLE_ARN,
         job_driver={
             "sparkSubmit": {
-                "entryPoint": f"s3://{bucket}/scripts/medi_project-assembly-0.1.0-SNAPSHOT.jar",
+                "entryPoint": f"s3://{bucket}/scripts/medi_project.jar",
                 "entryPointArguments" :["--path","{{ task_instance.xcom_pull(task_ids='list_keys', key='prefix_val') }}","--token",token],
                 "sparkSubmitParameters": "--conf spark.executor.cores=1 --conf spark.executor.memory=4g\
             --conf spark.driver.cores=1 --conf spark.driver.memory=4g --conf spark.executor.instances=1"
-                
+              
             
             }
         },
@@ -185,12 +186,9 @@ with DAG(
         text ="Spark Job 이 실패하였습니다. Log 를 확인하세요 ",
         trigger_rule=TriggerRule.ALL_FAILED
     )
-
-    # check_task >> [send_slack_fail, send_slack_success]
-    # send_slack_success >> create_app >> job1 >> spark_slack_fail_emr 
-    # job1 >> spark_slack
     
     check_task >> [send_slack_fail, send_slack_success]
     send_slack_success >> job1
-    job1 >> stop_app >> spark_slack >>  spark_slack_fail_emr
+    job1 >> stop_app >> spark_slack
     spark_slack >> check_data_task >> test_data_slack
+    job1 >> spark_slack_fail_emr
