@@ -74,13 +74,28 @@ def check_data(**context):
     # logging.info(f"Listing Keys from {bucket}/{prefix}")
     keys = hook.list_keys(bucket_name=bucket, prefix=prefix)
     
-    check_message = ""
+    check_message = """
+    <<segment_log table>>
+    S3 원본 데이터의 MessageId 
+    중복 제거 후 MessageId 
+    S3 원본 데이터의 총 row 
+    
+    Redshift 적재 데이터의 MessagId 
+    중복 제거 후 MessageId 
+    Redshift 적재 데이터의 총 row
+    
+    <<segment_log_session table>>
+    S3 원본 데이터의 session_id 
+    S3 원본 데이터의 총 row
+    Redshift 적재 데이터의 session_id
+    Redshift 적재 데이터의 총 row
+    """
     for key in keys:
       if key.endswith('.json'):
         body = hook.read_key(key=key, bucket_name=bucket)
         data = StringIO(body)
         df = pd.read_json(data,lines=True)
-        check_message += f"\n{key}:\n{df.head().to_string()}\n"
+        check_message += f"\ncheck:\n{df.head().to_string()}\n"
 
         # check_message += f"\n{df.head().to_string()}\n"
     context['task_instance'].xcom_push(key='check', value=check_message)
@@ -94,7 +109,7 @@ def check_data(**context):
 
 
 with DAG( 
-    dag_id="medistream_logdata",
+    dag_id="medistream_job3",
     schedule_interval=None,
     start_date=datetime(2023, 12, 6),
     tags=["Medistream"],
@@ -118,8 +133,8 @@ with DAG(
       token = token,
       channel = '#일반',
       text = """
-        {{ task_instance.xcom_pull(task_ids='list_keys', key='current_time') }}
-        Prefix: {{ task_instance.xcom_pull(task_ids='list_keys', key='prefix_val') }}
+        시작 시간:{{ task_instance.xcom_pull(task_ids='list_keys', key='current_time') }}\n
+        파일 경로: {{ task_instance.xcom_pull(task_ids='list_keys', key='prefix_val') }}
         file_size(total): {{ task_instance.xcom_pull(task_ids='list_keys', key='file_size') }} KB
         {{ task_instance.xcom_pull(task_ids='list_keys', key='key_val') }}개의 파일이 적재되었습니다.
     """,
